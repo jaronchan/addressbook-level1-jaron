@@ -67,6 +67,7 @@ public class AddressBook {
      */
     private static final String MESSAGE_ADDED = "New person added: %1$s, Phone: %2$s, Email: %3$s";
     private static final String MESSAGE_ADDRESSBOOK_CLEARED = "Address book has been cleared!";
+    private static final String MESSAGE_UPDATED = "Details updated: %1$s, Phone: %2$s, Email: %3$s";
     private static final String MESSAGE_COMMAND_HELP = "%1$s: %2$s";
     private static final String MESSAGE_COMMAND_HELP_PARAMETERS = "\tParameters: %1$s";
     private static final String MESSAGE_COMMAND_HELP_EXAMPLE = "\tExample: %1$s";
@@ -132,6 +133,13 @@ public class AddressBook {
     private static final String COMMAND_EXIT_WORD = "exit";
     private static final String COMMAND_EXIT_DESC = "Exits the program.";
     private static final String COMMAND_EXIT_EXAMPLE = COMMAND_EXIT_WORD;
+
+    private static final String COMMAND_UPDATE_WORD = "update";
+    private static final String COMMAND_UPDATE_DESC = "Updates a persons particulars";
+    private static final String COMMAND_UPDATE_PARAMETERS = "NAME "
+            + PERSON_DATA_PREFIX_PHONE + "PHONE_NUMBER "
+            + PERSON_DATA_PREFIX_EMAIL + "EMAIL";
+    private static final String COMMAND_UPDATE_EXAMPLE = COMMAND_UPDATE_WORD + "John Doe p/(new number) e/(new email)";
 
     private static final String DIVIDER = "===================================================";
 
@@ -383,6 +391,8 @@ public class AddressBook {
             return getUsageInfoForAllCommands();
         case COMMAND_EXIT_WORD:
             executeExitProgramRequest();
+        case COMMAND_UPDATE_WORD:
+            return executeUpdatePerson(commandArgs);
         default:
             return getMessageForInvalidCommandInput(commandType, getUsageInfoForAllCommands());
         }
@@ -586,6 +596,42 @@ public class AddressBook {
      */
     private static void executeExitProgramRequest() {
         exitProgram();
+    }
+
+    /**
+     * Adds a person (specified by the command args) to the address book.
+     * The entire command arguments string is treated as a string representation of the person to add.
+     *
+     * @param commandArgs full command args string from the user
+     * @return feedback display message for the operation result
+     */
+    private static String executeUpdatePerson(String commandArgs) {
+        // try decoding a person from the raw args
+        final Optional<String[]> decodeResult = decodePersonFromString(commandArgs);
+
+        // checks if args are valid (decode result will not be present if the person is invalid)
+        if (!decodeResult.isPresent()) {
+            return getMessageForInvalidCommandInput(COMMAND_UPDATE_WORD, getUsageInfoForUpdateCommand());
+        }
+
+        // add the person as specified
+        final String[] personToUpdate = decodeResult.get();
+        updatePersonToAddressBook(personToUpdate);
+        return getMessageForSuccessfulUpdatePerson(personToUpdate);
+    }
+
+    /**
+     * Constructs a feedback message for a successful add person command execution.
+     *
+     * @see #executeAddPerson(String)
+     * @param updatedPerson person who was successfully updated
+     * @return successful add person feedback message
+     */
+    private static String getMessageForSuccessfulUpdatePerson(String[] updatedPerson) {
+        return String.format(MESSAGE_UPDATED,
+                getNameFromPerson(updatedPerson),
+                getPhoneFromPerson(updatedPerson),
+                getEmailFromPerson(updatedPerson));
     }
 
     /*
@@ -1138,6 +1184,12 @@ public class AddressBook {
                 + String.format(MESSAGE_COMMAND_HELP_EXAMPLE, COMMAND_EXIT_EXAMPLE);
     }
 
+    /** Returns the string for showing 'update' command usage instruction */
+    private static String getUsageInfoForUpdateCommand() {
+        return String.format(MESSAGE_COMMAND_HELP, COMMAND_UPDATE_WORD, COMMAND_UPDATE_DESC) + LS
+                + String.format(MESSAGE_COMMAND_HELP_PARAMETERS, COMMAND_UPDATE_PARAMETERS) + LS
+                + String.format(MESSAGE_COMMAND_HELP_EXAMPLE, COMMAND_UPDATE_EXAMPLE) + LS;
+    }
 
     /*
      * ============================
