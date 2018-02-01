@@ -409,6 +409,16 @@ public class AddressBook {
     }
 
     /**
+     * Splits raw user input into command word and command arguments string
+     *
+     * @return  size 2 array; first element is the command type and second element is the arguments string
+     */
+    private static String[] splitIndexAndParams(String rawUserInput) {
+        final String[] splitUpdate =  rawUserInput.trim().split("\\s+", 2);
+        return splitUpdate.length == 2 ? splitUpdate : new String[] { splitUpdate[0] , "" }; // else case: no parameters
+    }
+
+    /**
      * Constructs a generic feedback message for an invalid command from user, with instructions for correct usage.
      *
      * @param correctUsageInfo message showing the correct usage
@@ -606,18 +616,43 @@ public class AddressBook {
      * @return feedback display message for the operation result
      */
     private static String executeUpdatePerson(String commandArgs) {
-        // try decoding a person from the raw args
-        final Optional<String[]> decodeResult = decodePersonFromString(commandArgs);
+        final String[] updateIndexAndParams = splitIndexAndParams(commandArgs);
+        final String updateIndex = updateIndexAndParams[0];
+        final String updateParams = updateIndexAndParams[1];
+        final Optional<String[]> decodeUpdate = decodePersonFromString(updateParams);
 
-        // checks if args are valid (decode result will not be present if the person is invalid)
-        if (!decodeResult.isPresent()) {
-            return getMessageForInvalidCommandInput(COMMAND_UPDATE_WORD, getUsageInfoForUpdateCommand());
+
+         // checks if args are valid (decode result will not be present if the person is invalid)
+         if (!decodeUpdate.isPresent()) {
+             return getMessageForInvalidCommandInput(COMMAND_UPDATE_WORD, getUsageInfoForUpdateCommand());
+         }
+
+
+//        if (!isUpdatePersonArgsValid(commandArgs)) {
+//            return getMessageForInvalidCommandInput(COMMAND_DELETE_WORD, getUsageInfoForUpdateCommand());
+//        }
+        final int targetVisibleIndex = extractTargetIndexFromUpdatePersonArgs(updateIndex);
+        if (!isDisplayIndexValidForLastPersonListingView(targetVisibleIndex)) {
+            return MESSAGE_INVALID_PERSON_DISPLAYED_INDEX;
         }
 
-        // add the person as specified
-        final String[] personToUpdate = decodeResult.get();
-        updatePersonToAddressBook(personToUpdate);
-        return getMessageForSuccessfulUpdatePerson(personToUpdate);
+        final String[] detailsToUpdate = decodeUpdate.get();
+
+        final int targetIndex = targetVisibleIndex - DISPLAYED_INDEX_OFFSET;
+        final String[] targetInModel = getPersonByLastVisibleIndex(targetVisibleIndex);
+        updatePersonFromAddressBook(targetIndex, detailsToUpdate);
+        return getMessageForSuccessfulUpdatePerson(targetInModel); // success
+//                : MESSAGE_PERSON_NOT_IN_ADDRESSBOOK; // not found
+    }
+
+    /**
+     * Extracts the target's index from the raw delete person args string
+     *
+     * @param rawArgs raw command args string for the delete person command
+     * @return extracted index
+     */
+    private static int extractTargetIndexFromUpdatePersonArgs(String rawArgs) {
+        return Integer.parseInt(rawArgs.trim());
     }
 
     /**
@@ -872,6 +907,20 @@ public class AddressBook {
     private static void initialiseAddressBookModel(ArrayList<String[]> persons) {
         ALL_PERSONS.clear();
         ALL_PERSONS.addAll(persons);
+    }
+
+    /**
+     * Updates a person's details to the address book. Saves changes to storage file.
+     *
+     * @param updatedParams to update
+     */
+    private static void updatePersonFromAddressBook(int exactPersonIndex, String[] updatedParams) {
+
+        ALL_PERSONS.set(exactPersonIndex, updatedParams);
+//        if (hasChanged) {
+//            savePersonsToFile(getAllPersonsInAddressBook(), storageFilePath);
+//        }
+//        return hasChanged;
     }
 
 
@@ -1136,6 +1185,7 @@ public class AddressBook {
                 + getUsageInfoForDeleteCommand() + LS
                 + getUsageInfoForClearCommand() + LS
                 + getUsageInfoForExitCommand() + LS
+                + getUsageInfoForUpdateCommand() + LS
                 + getUsageInfoForHelpCommand();
     }
 
